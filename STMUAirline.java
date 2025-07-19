@@ -1,0 +1,347 @@
+import javax.swing.*;
+import java.awt.*;
+import java.io.*;
+import java.util.*;
+import java.util.List;
+import java.util.ArrayList;
+
+
+class Flight {
+    String flightId;
+    String source;
+    String destination;
+    int duration;
+
+    Flight(String flightId, String source, String destination, int duration) {
+        this.flightId = flightId;
+        this.source = source;
+        this.destination = destination;
+        this.duration = duration;
+    }
+
+    @Override
+    public String toString() {
+        return flightId + " - " + source + " to " + destination + " (" + duration + " mins)";
+    }
+}
+
+class Graph {
+    private final Map<String, List<Flight>> adjList = new HashMap<>();
+
+    void addFlight(String source, String destination, String flightId, int duration) {
+        adjList.putIfAbsent(source, new ArrayList<>());
+        adjList.get(source).add(new Flight(flightId, source, destination, duration));
+    }
+
+    String displayRoutes() {
+        StringBuilder routes = new StringBuilder();
+        for (String city : adjList.keySet()) {
+            routes.append("Flights from ").append(city).append(":\n");
+            for (Flight flight : adjList.get(city)) {
+                routes.append("    ").append(flight).append("\n");
+            }
+        }
+        return routes.toString();
+    }
+
+    List<Flight> searchFlights(String flightId) {
+        List<Flight> result = new ArrayList<>();
+        for (List<Flight> flights : adjList.values()) {
+            for (Flight flight : flights) {
+                if (flight.flightId.equalsIgnoreCase(flightId)) {
+                    result.add(flight);
+                }
+            }
+        }
+        return result;
+    }
+}
+
+class Booking {
+    String bookingId;
+    String passengerName;
+    String flightId;
+
+    Booking(String bookingId, String passengerName, String flightId) {
+        this.bookingId = bookingId;
+        this.passengerName = passengerName;
+        this.flightId = flightId;
+    }
+
+    @Override
+    public String toString() {
+        return "Booking ID: " + bookingId + ", Passenger: " + passengerName + ", Flight: " + flightId;
+    }
+}
+
+public class STMUAirline {
+    private final Graph flightRoutes = new Graph();
+    private final Map<String, Booking> bookings = new HashMap<>();
+    private final Queue<Booking> bookingQueue = new LinkedList<>();
+
+    public STMUAirline() {
+        loadFlightsFromFile();
+        loadBookingsFromFile();
+    }
+
+    public void addFlight(String source, String destination, String flightId, int duration) {
+        flightRoutes.addFlight(source, destination, flightId, duration);
+        saveFlightToFile(source, destination, flightId, duration);
+    }
+
+    public String viewRoutes() {
+        return flightRoutes.displayRoutes();
+    }
+
+    public void bookTicket(String bookingId, String passengerName, String flightId) {
+        Booking booking = new Booking(bookingId, passengerName, flightId);
+        bookingQueue.add(booking);
+        bookings.put(bookingId, booking);
+        saveBookingToFile(booking);
+    }
+
+    public String processBookings() {
+        StringBuilder result = new StringBuilder();
+        while (!bookingQueue.isEmpty()) {
+            Booking booking = bookingQueue.poll();
+            result.append("Processing: ").append(booking).append("\n");
+        }
+        return result.length() == 0 ? "No bookings to process." : result.toString();
+    }
+
+    public String viewBooking(String bookingId) {
+        Booking booking = bookings.get(bookingId);
+        return booking != null ? booking.toString() : "No booking found for ID: " + bookingId;
+    }
+
+    public List<Flight> searchFlights(String flightId) {
+        return flightRoutes.searchFlights(flightId);
+    }
+
+    public List<Booking> searchPassengers(String passengerName) {
+        List<Booking> result = new ArrayList<>();
+        for (Booking booking : bookings.values()) {
+            if (booking.passengerName.equalsIgnoreCase(passengerName)) {
+                result.add(booking);
+            }
+        }
+        return result;
+    }
+
+    private void saveFlightToFile(String source, String destination, String flightId, int duration) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter("flights.txt", true))) {
+            writer.write(source + "," + destination + "," + flightId + "," + duration);
+            writer.newLine();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void saveBookingToFile(Booking booking) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter("bookings.txt", true))) {
+            writer.write(booking.bookingId + "," + booking.passengerName + "," + booking.flightId);
+            writer.newLine();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void loadFlightsFromFile() {
+        try (BufferedReader reader = new BufferedReader(new FileReader("flights.txt"))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split(",");
+                String source = parts[0];
+                String destination = parts[1];
+                String flightId = parts[2];
+                int duration = Integer.parseInt(parts[3]);
+                flightRoutes.addFlight(source, destination, flightId, duration);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void loadBookingsFromFile() {
+        try (BufferedReader reader = new BufferedReader(new FileReader("bookings.txt"))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split(",");
+                String bookingId = parts[0];
+                String passengerName = parts[1];
+                String flightId = parts[2];
+                Booking booking = new Booking(bookingId, passengerName, flightId);
+                bookings.put(bookingId, booking);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void main(String[] args) {
+        String correctUsername = "sudaiskhalid";
+        String correctPassword = "sudais0050";
+
+        while (true) {
+            JTextField usernameField = new JTextField();
+            JPasswordField passwordField = new JPasswordField();
+
+            Object[] fields = {
+                    "Username:", usernameField,
+                    "Password:", passwordField
+            };
+
+            int option = JOptionPane.showConfirmDialog(null, fields, "Login", JOptionPane.OK_CANCEL_OPTION);
+
+            if (option == JOptionPane.OK_OPTION) {
+                String username = usernameField.getText();
+                String password = new String(passwordField.getPassword());
+
+                if (username.equals(correctUsername) && password.equals(correctPassword)) {
+                    JOptionPane.showMessageDialog(null, "Login successful! Welcome to STMU Airline Management System.");
+                    break;
+                } else {
+                    JOptionPane.showMessageDialog(null, "Invalid username or password. Please try again.", "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            } else {
+                System.exit(0);
+            }
+        }
+
+        STMUAirline airline = new STMUAirline();
+
+        JFrame frame = new JFrame("STMU Airline Management System");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setSize(800, 500);
+        frame.setLayout(new BorderLayout());
+
+        JLabel headerLabel = new JLabel("STMU Airline Management System", JLabel.CENTER);
+        headerLabel.setFont(new Font("Arial", Font.BOLD, 24));
+        headerLabel.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
+        frame.add(headerLabel, BorderLayout.NORTH);
+
+        JPanel buttonPanel = new JPanel(new GridLayout(4, 2, 10, 10));
+        buttonPanel.setBorder(BorderFactory.createEmptyBorder(20, 50, 20, 50));
+
+        JButton addFlightButton = new JButton("Add Flight");
+        JButton viewRoutesButton = new JButton("View Routes");
+        JButton bookTicketButton = new JButton("Book Ticket");
+        JButton processBookingsButton = new JButton("Process Bookings");
+        JButton viewBookingButton = new JButton("View Booking");
+        JButton searchButton = new JButton("Search");
+        JButton exitButton = new JButton("Exit");
+
+        buttonPanel.add(addFlightButton);
+        buttonPanel.add(viewRoutesButton);
+        buttonPanel.add(bookTicketButton);
+        buttonPanel.add(processBookingsButton);
+        buttonPanel.add(viewBookingButton);
+        buttonPanel.add(searchButton);
+        buttonPanel.add(exitButton);
+
+        frame.add(buttonPanel, BorderLayout.CENTER);
+
+        addFlightButton.addActionListener(e -> {
+            JTextField sourceField = new JTextField();
+            JTextField destinationField = new JTextField();
+            JTextField flightIdField = new JTextField();
+            JTextField durationField = new JTextField();
+
+            Object[] fields = {
+                    "Source:", sourceField,
+                    "Destination:", destinationField,
+                    "Flight ID:", flightIdField,
+                    "Duration (in minutes):", durationField
+            };
+
+            int option = JOptionPane.showConfirmDialog(frame, fields, "Add Flight", JOptionPane.OK_CANCEL_OPTION);
+            if (option == JOptionPane.OK_OPTION) {
+                try {
+                    String source = sourceField.getText();
+                    String destination = destinationField.getText();
+                    String flightId = flightIdField.getText();
+                    int duration = Integer.parseInt(durationField.getText());
+                    airline.addFlight(source, destination, flightId, duration);
+                    JOptionPane.showMessageDialog(frame, "Flight added successfully!");
+                } catch (NumberFormatException ex) {
+                    JOptionPane.showMessageDialog(frame, "Invalid duration. Please enter a number.");
+                }
+            }
+        });
+
+        viewRoutesButton.addActionListener(e -> {
+            String routes = airline.viewRoutes();
+            JTextArea textArea = new JTextArea(routes);
+            textArea.setEditable(false);
+            JOptionPane.showMessageDialog(frame, new JScrollPane(textArea), "Flight Routes", JOptionPane.INFORMATION_MESSAGE);
+        });
+
+        bookTicketButton.addActionListener(e -> {
+            JTextField bookingIdField = new JTextField();
+            JTextField passengerNameField = new JTextField();
+            JTextField flightIdField = new JTextField();
+
+            Object[] fields = {
+                    "Booking ID:", bookingIdField,
+                    "Passenger Name:", passengerNameField,
+                    "Flight ID:", flightIdField
+            };
+
+            int option = JOptionPane.showConfirmDialog(frame, fields, "Book Ticket", JOptionPane.OK_CANCEL_OPTION);
+            if (option == JOptionPane.OK_OPTION) {
+                String bookingId = bookingIdField.getText();
+                String passengerName = passengerNameField.getText();
+                String flightId = flightIdField.getText();
+                airline.bookTicket(bookingId, passengerName, flightId);
+                JOptionPane.showMessageDialog(frame, "Ticket booked successfully!");
+            }
+        });
+
+        processBookingsButton.addActionListener(e -> {
+            String result = airline.processBookings();
+            JOptionPane.showMessageDialog(frame, result, "Process Bookings", JOptionPane.INFORMATION_MESSAGE);
+        });
+
+        viewBookingButton.addActionListener(e -> {
+            String bookingId = JOptionPane.showInputDialog(frame, "Enter Booking ID:");
+            if (bookingId != null) {
+                String bookingInfo = airline.viewBooking(bookingId);
+                JOptionPane.showMessageDialog(frame, bookingInfo, "View Booking", JOptionPane.INFORMATION_MESSAGE);
+            }
+        });
+
+        searchButton.addActionListener(e -> {
+            String[] options = {"Search by Flight ID", "Search by Passenger Name"};
+            int choice = JOptionPane.showOptionDialog(frame, "Select search type:", "Search",
+                    JOptionPane.DEFAULT_OPTION, JOptionPane.INFORMATION_MESSAGE, null, options, options[0]);
+
+            if (choice == 0) {
+                String flightId = JOptionPane.showInputDialog(frame, "Enter Flight ID:");
+                if (flightId != null) {
+                    List<Flight> flights = airline.searchFlights(flightId);
+                    StringBuilder result = new StringBuilder();
+                    for (Flight flight : flights) {
+                        result.append(flight).append("\n");
+                    }
+                    JOptionPane.showMessageDialog(frame, result.length() > 0 ? result.toString() : "No flights found for ID: " + flightId,
+                            "Search Flights", JOptionPane.INFORMATION_MESSAGE);
+                }
+            } else if (choice == 1) {
+                String passengerName = JOptionPane.showInputDialog(frame, "Enter Passenger Name:");
+                if (passengerName != null) {
+                    List<Booking> bookings = airline.searchPassengers(passengerName);
+                    StringBuilder result = new StringBuilder();
+                    for (Booking booking : bookings) {
+                        result.append(booking).append("\n");
+                    }
+                    JOptionPane.showMessageDialog(frame, result.length() > 0 ? result.toString() : "No bookings found for passenger: " + passengerName,
+                            "Search Passengers", JOptionPane.INFORMATION_MESSAGE);
+                }
+            }
+        });
+
+        exitButton.addActionListener(e -> System.exit(0));
+
+        frame.setVisible(true);
+    }
+}
